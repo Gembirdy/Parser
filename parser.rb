@@ -1,20 +1,24 @@
-# ruby parser.rb https://www.petsonic.com/snacks-huesos-para-perros/ results
 require 'csv'
 require 'curb'
 require 'nokogiri'
 
-if !ARGV[0].nil? && !ARGV[1].nil?
+def download_page(link) 
+    http = Curl.get(link)
+    html = Nokogiri::HTML(http.body_str)
+end
 
+if !ARGV[0].nil? && !ARGV[1].nil?
     url = ARGV[0]
     file_name = "#{ARGV[1]}.csv"
 
     items = []
-    file_path = "/home/gembird/Parser_profitero/#{file_name}.csv"
+    current_path = File.dirname(__FILE__)
+    file_path = current_path + file_name
     products_per_page = 25
-    # url = 'https://www.petsonic.com/snacks-huesos-para-perros/'
 
-    http = Curl.get(url)
-    html = Nokogiri::HTML(http.body_str)
+    puts "\nDownloading #{url} with Curl" 
+    puts "Scrapping #{url} with Nokogiri"
+    html = download_page(url)
 
     total_products = (html.xpath("//span[@class='heading-counter']/text()").to_s)[0..1].to_i
     puts "products found: #{total_products}"
@@ -22,63 +26,45 @@ if !ARGV[0].nil? && !ARGV[1].nil?
     total_pages = (total_products / products_per_page.to_f).ceil
     puts "pages found: #{total_pages}\n"
 
-    current_page = 1
-    while current_page <= total_pages do
-        
-        if current_page == 1
-            ur = url 
-        else
-            ur = "#{url}?p=#{current_page}"
-        end
-
-        puts "\nDownloading #{ur} with Curl" 
-        http = Curl.get(ur)
-        puts "Scrapping #{ur} with Nokogiri"
-        html = Nokogiri::HTML(http.body_str)
+    (1..total_pages).each do |current_page|    
+        current_page == 1 ? ur = url : ur = "#{url}?p=#{current_page}"
 
         puts 'Collecting links of products...'
-        links = html.xpath("//a[@class='product-name']/@href")
-        
-        puts "Found #{links.count} links on page #{current_page}: "
-        links.each do |link|
-            unparsed_page = Curl.get(link)
-            parsed_page = Nokogiri::HTML(unparsed_page.body_str)
+        html = download_page(ur)
 
+        links = html.xpath("//a[@class='product-name']/@href")
+        puts "Found #{links.count} links on page #{current_page}: "
+
+        links.each do |link|
+            parsed_page = download_page(link)
             product = {
                 :title => parsed_page.xpath("//h1[@class='product_main_name']/text()"),
                 :image_url => parsed_page.xpath("//img[@id='bigpic']/@src"),
                 :weights => parsed_page.xpath("//span[@class='radio_label']/text()"),
                 :prices => parsed_page.xpath("//span[@class='price_comb']/text()")
             }
-            puts "  #{product[:title]} on page #{current_page}"
-
+            puts "  #{product[:title]}"
 
             product[:prices].each_with_index do |price, index|
                 item = {
                     :name => "#{product[:title]} - #{product[:weights][index]}", 
-                    :price => price,
+                    :price => price.to_s.delete!('€/u '),
                     :image => product[:image_url]
                 }
-                # puts index
                 items << item
             end
-                
         end
-
-        current_page += 1
     end
-
-    puts "writing to #{file_name}.csv"
+    puts "writing to #{file_name}..."
     lines_count = 0
     CSV.open(file_name, 'wb') do |csv|
+        csv << %w[Name Price Image]
         items.each do |item|
             csv << [item[:name], item[:price], item[:image]]
             lines_count += 1
         end
     end
-    
     puts "Created #{lines_count} records in #{file_path}"
-
 else
     puts 'Enter ARGV params'
 end
