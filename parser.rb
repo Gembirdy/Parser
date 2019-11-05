@@ -38,10 +38,10 @@ if !ARGV[0].nil? && !ARGV[1].nil?
         links.each do |link|
             parsed_page = download_page(link)
             product = {
-                title => parsed_page.xpath("//h1[@class='product_main_name']/text()"),
-                image_url => parsed_page.xpath("//img[@id='bigpic']/@src"),
-                weights => parsed_page.xpath("//span[@class='radio_label']/text()"),
-                prices => parsed_page.xpath("//span[@class='price_comb']/text()")
+                :title => parsed_page.xpath("//h1[@class='product_main_name']/text()"),
+                :image_url => parsed_page.xpath("//img[@id='bigpic']/@src"),
+                :weights => parsed_page.xpath("//span[@class='radio_label']/text()"),
+                :prices => parsed_page.xpath("//span[@class='price_comb']/text()")
             }
             puts "  #{product[:title]}"
 
