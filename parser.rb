@@ -4,7 +4,7 @@ require 'nokogiri'
 
 def download_page(link) 
     http = Curl.get(link)
-    html = Nokogiri::HTML(http.body_str)
+    Nokogiri::HTML(http.body_str)
 end
 
 if !ARGV[0].nil? && !ARGV[1].nil?
@@ -38,10 +38,10 @@ if !ARGV[0].nil? && !ARGV[1].nil?
         links.each do |link|
             parsed_page = download_page(link)
             product = {
-                :title => parsed_page.xpath("//h1[@class='product_main_name']/text()"),
-                :image_url => parsed_page.xpath("//img[@id='bigpic']/@src"),
-                :weights => parsed_page.xpath("//span[@class='radio_label']/text()"),
-                :prices => parsed_page.xpath("//span[@class='price_comb']/text()")
+                title => parsed_page.xpath("//h1[@class='product_main_name']/text()"),
+                image_url => parsed_page.xpath("//img[@id='bigpic']/@src"),
+                weights => parsed_page.xpath("//span[@class='radio_label']/text()"),
+                prices => parsed_page.xpath("//span[@class='price_comb']/text()")
             }
             puts "  #{product[:title]}"
 
@@ -55,6 +55,7 @@ if !ARGV[0].nil? && !ARGV[1].nil?
             end
         end
     end
+
     puts "writing to #{file_name}..."
     lines_count = 0
     CSV.open(file_name, 'wb') do |csv|
