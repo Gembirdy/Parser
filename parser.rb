@@ -25,7 +25,7 @@ if !ARGV[0].nil? && !ARGV[1].nil?
 
     total_pages = (total_products / products_per_page.to_f).ceil
     puts "pages found: #{total_pages}\n"
-
+    
     (1..total_pages).each do |current_page|    
         current_page == 1 ? ur = url : ur = "#{url}?p=#{current_page}"
 
@@ -35,25 +35,31 @@ if !ARGV[0].nil? && !ARGV[1].nil?
         links = html.xpath("//a[@class='product-name']/@href")
         puts "Found #{links.count} links on page #{current_page}: "
 
+        threads = []
         links.each do |link|
-            parsed_page = download_page(link)
-            product = {
-                :title => parsed_page.xpath("//h1[@class='product_main_name']/text()"),
-                :image_url => parsed_page.xpath("//img[@id='bigpic']/@src"),
-                :weights => parsed_page.xpath("//span[@class='radio_label']/text()"),
-                :prices => parsed_page.xpath("//span[@class='price_comb']/text()")
-            }
-            puts "  #{product[:title]}"
-
-            product[:prices].each_with_index do |price, index|
-                item = {
-                    :name => "#{product[:title]} - #{product[:weights][index]}", 
-                    :price => price.to_s.delete!('€/u '),
-                    :image => product[:image_url]
+            threads << Thread.new do
+                parsed_page = download_page(link)
+                product = {
+                    :title => parsed_page.xpath("//h1[@class='product_main_name']/text()"),
+                    :image_url => parsed_page.xpath("//img[@id='bigpic']/@src"),
+                    :weights => parsed_page.xpath("//span[@class='radio_label']/text()"),
+                    :prices => parsed_page.xpath("//span[@class='price_comb']/text()")
                 }
-                items << item
+                puts "  #{product[:title]}"
+
+                product[:prices].each_with_index do |price, index|
+                    item = {
+                        :name => "#{product[:title]} - #{product[:weights][index]}", 
+                        :price => price.to_s.delete!('€/u '),
+                        :image => product[:image_url]
+                    }
+                    items << item
+                end
+
             end
         end
+
+        threads.each(&:join)
     end
 
     puts "writing to #{file_name}..."
